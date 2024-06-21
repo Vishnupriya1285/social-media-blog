@@ -1,0 +1,19 @@
+package com.learning.springboot.socialmedia_blog_app.exceptionhandlers;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class ResourceNotFoundException extends RuntimeException{
+    private String resource;
+    private String fieldName;
+    private String fieldValue;
+
+    public ResourceNotFoundException(String resource, String fieldName, String fieldValue) {
+        //super(resource+" not found with "+ fieldName+" with value "+fieldValue);
+        super(String.format("%s not found with %s : %s", resource, fieldName, fieldValue));
+        this.resource=resource;
+        this.fieldName=fieldName;
+        this.fieldValue=fieldValue;
+    }
+}
