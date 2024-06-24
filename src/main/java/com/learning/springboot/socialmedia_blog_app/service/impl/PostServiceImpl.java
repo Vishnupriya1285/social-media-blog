@@ -7,9 +7,12 @@ import com.learning.springboot.socialmedia_blog_app.payload.PostResponse;
 import com.learning.springboot.socialmedia_blog_app.repository.PostRepository;
 import com.learning.springboot.socialmedia_blog_app.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -34,6 +37,35 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostResponse getAllPosts(int pageNo, int pageSize) {
         Pageable pageable= PageRequest.of(pageNo,pageSize);
+        Page<PostEntity> postEntities=postRepository.findAll(pageable);
+
+        //Map (or convert) PostEntity to PostDto
+        if(postEntities!=null) {
+            List<PostDto> postDtoList=postEntities.stream()
+                    .map(postEntity -> mapEntityToDto(postEntity)).collect(Collectors.toList());
+            PostResponse postResponse=PostResponse.builder()
+                    .content(postDtoList)
+                    .pageNo(postEntities.getNumber())
+                    .pageSize(postEntities.getSize())
+                    .totalElements(postEntities.getNumberOfElements())
+                    .totalPages(postEntities.getTotalPages())
+                    .isLastPage(postEntities.isLast())
+                    .build();
+            return postResponse;
+        }
+        return null;
+    }
+    @Override
+    public PostResponse getAllPosts(int pageNo, int pageSize,String sortBy,String sortDirection) {
+        Pageable pageable;
+
+        if(sortBy!=null&&sortDirection!=null)
+        {
+            Sort sort=sortDirection.equalsIgnoreCase("ASC")?Sort.by(sortBy).ascending():Sort.by(sortBy).descending();
+            pageable= PageRequest.of(pageNo,pageSize,sort);
+        }else
+            pageable=PageRequest.of(pageNo,pageSize);
+
         Page<PostEntity> postEntities=postRepository.findAll(pageable);
 
         //Map (or convert) PostEntity to PostDto
