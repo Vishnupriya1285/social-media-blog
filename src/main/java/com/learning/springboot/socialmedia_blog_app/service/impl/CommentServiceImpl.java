@@ -1,5 +1,10 @@
 package com.learning.springboot.socialmedia_blog_app.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jsonpatch.JsonPatch;
+import com.github.fge.jsonpatch.JsonPatchException;
 import com.learning.springboot.socialmedia_blog_app.dto.CommentDto;
 import com.learning.springboot.socialmedia_blog_app.exceptionhandlers.ResourceNotFoundException;
 import com.learning.springboot.socialmedia_blog_app.model.CommentEntity;
@@ -7,6 +12,7 @@ import com.learning.springboot.socialmedia_blog_app.model.PostEntity;
 import com.learning.springboot.socialmedia_blog_app.repository.CommentRepository;
 import com.learning.springboot.socialmedia_blog_app.repository.PostRepository;
 import com.learning.springboot.socialmedia_blog_app.service.CommentService;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +26,8 @@ public class CommentServiceImpl implements CommentService {
     private PostRepository postRepository;
     @Autowired
     private CommentRepository commentRepository;
+    @Autowired
+    private ModelMapper modelMapper;
 
     @Override
     public CommentDto createCommentByPostId(long postId,CommentDto commentDto) {
@@ -112,22 +120,65 @@ public class CommentServiceImpl implements CommentService {
         return "All the Comments for the post with Id : "+postId+" is deleted.";
     }
 
+    @Override
+    public CommentDto updateCommentByPostIdAndCommentIdUsingJsonPatch(long postId, long commentId, JsonPatch jsonPatch) {
+        //Fetching PostEntity using PostRepository from postId
+        PostEntity postEntity=postRepository.findById(postId).orElseThrow(()->new ResourceNotFoundException("Post","Id",String.valueOf(postId)));
+
+        //Fetching CommentEntity using CommentRepository from commentId
+        CommentEntity commentEntity=commentRepository.findById(commentId).orElseThrow(()->new ResourceNotFoundException("Comment","ID",String.valueOf(commentId)));
+
+        //Validate comment belong to particular Post
+        if(!(commentEntity.getPostEntity().getId()).equals(postEntity.getId()))
+            throw new RuntimeException("Bad Request :: Comment not found!");
+
+        //Convert CommentEntity to Dto
+        CommentDto commentDto=mapEntityToDto(commentEntity);
+
+        //Updating CommentDto using JsonPatch
+        try {
+            commentDto=applyJsonPatchToComment(commentDto,jsonPatch);
+        } catch (JsonPatchException e) {
+            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        //Converting patched commentDto to commentEntity
+        CommentEntity patchedCommentEntity=mapCommentDtoToEntity(commentDto);
+
+        //saving the patched Comment to the DB
+        patchedCommentEntity.setPostEntity(postEntity);
+        commentRepository.save(patchedCommentEntity);
+        return commentDto;
+    }
+
     private CommentEntity mapCommentDtoToEntity(CommentDto commentDto) {
-        CommentEntity commentEntity=new CommentEntity();
-        commentEntity.setUserName(commentDto.getUserName());
-        commentEntity.setEmail(commentDto.getEmail());
-        commentEntity.setBody(commentDto.getBody());
+//        CommentEntity commentEntity=new CommentEntity();
+//        commentEntity.setUserName(commentDto.getUserName());
+//        commentEntity.setEmail(commentDto.getEmail());
+//        commentEntity.setBody(commentDto.getBody());
+
+        CommentEntity commentEntity=modelMapper.map(commentDto,CommentEntity.class);
 
         return commentEntity;
     }
 
     private CommentDto mapEntityToDto(CommentEntity savedCommentEntity) {
-        CommentDto commentDto=new CommentDto();
-        commentDto.setCommentId(savedCommentEntity.getCommentId());
-        commentDto.setUserName(savedCommentEntity.getUserName());
-        commentDto.setEmail(savedCommentEntity.getEmail());
-        commentDto.setBody(savedCommentEntity.getBody());
+//        CommentDto commentDto=new CommentDto();
+//        commentDto.setCommentId(savedCommentEntity.getCommentId());
+//        commentDto.setUserName(savedCommentEntity.getUserName());
+//        commentDto.setEmail(savedCommentEntity.getEmail());
+//        commentDto.setBody(savedCommentEntity.getBody());
+
+        CommentDto commentDto=modelMapper.map(savedCommentEntity,CommentDto.class);
 
         return commentDto;
+    }
+
+    private CommentDto applyJsonPatchToComment(CommentDto commentDto,JsonPatch jsonPatch) throws JsonPatchException, JsonProcessingException {
+        ObjectMapper mapper=new ObjectMapper();
+        JsonNode commentDtoJsonNode=mapper.convertValue(commentDto, JsonNode.class);
+        JsonNode patchedJsonNode=jsonPatch.apply(commentDtoJsonNode);
+        return mapper.treeToValue(patchedJsonNode,CommentDto.class);
     }
 }

@@ -1,5 +1,6 @@
 package com.learning.springboot.socialmedia_blog_app.controller;
 
+import com.github.fge.jsonpatch.JsonPatch;
 import com.learning.springboot.socialmedia_blog_app.dto.CommentDto;
 import com.learning.springboot.socialmedia_blog_app.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,13 @@ public class CommentController {
     public ResponseEntity<CommentDto> updateCommentByPosIdAndCommentID(@PathVariable long postId, @PathVariable long commentId,@RequestBody  CommentDto commentDto)
     {
         return new ResponseEntity<>(commentService.updateCommentByPostIdAndCommentId(postId,commentId,commentDto), HttpStatus.OK);
+    }
+
+    //PATCH /v1/api/posts/{postId}/comments/{commentId}
+    @PatchMapping("/posts/{postId}/comments/{commentId}")
+    public ResponseEntity<CommentDto> updateCommentByPosIdAndCommentIDUsingJsonPatch(@PathVariable long postId, @PathVariable long commentId, @RequestBody JsonPatch jsonPatch)
+    {
+        return new ResponseEntity<>(commentService.updateCommentByPostIdAndCommentIdUsingJsonPatch(postId,commentId,jsonPatch), HttpStatus.OK);
     }
 
     //DELETE /v1/api/posts/{postId}/comments/{commentId}
