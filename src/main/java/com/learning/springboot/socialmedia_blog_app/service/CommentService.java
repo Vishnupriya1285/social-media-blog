@@ -1,5 +1,6 @@
 package com.learning.springboot.socialmedia_blog_app.service;
 
+import com.github.fge.jsonpatch.JsonPatch;
 import com.learning.springboot.socialmedia_blog_app.dto.CommentDto;
 import com.learning.springboot.socialmedia_blog_app.repository.CommentRepository;
 
@@ -12,4 +13,5 @@ public interface CommentService {
    CommentDto updateCommentByPostIdAndCommentId(long postId,long commentId,CommentDto commentDto);
    String deleteCommentByPostIdAndCommentId(long postId,long commentId);
    String deleteAllCommentsOfPostFromPostId(long postId);
+   CommentDto updateCommentByPostIdAndCommentIdUsingJsonPatch(long postId, long commentId, JsonPatch jsonPatch);
 }
