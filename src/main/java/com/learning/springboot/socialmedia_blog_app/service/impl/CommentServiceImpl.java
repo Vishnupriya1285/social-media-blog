@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CommentServiceImpl implements CommentService {
@@ -39,12 +40,76 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public List<CommentDto> getAllCommentsByPostId(long postId) {
+        List<CommentEntity> commentEntities=commentRepository.findByPostId(postId);
+        if(commentEntities!=null&&!commentEntities.isEmpty())
+        {
+            return commentEntities.stream().map(commentEntity -> mapEntityToDto(commentEntity)).collect(Collectors.toList());
+        }
         return List.of();
     }
 
     @Override
     public CommentDto getCommentByPostIdAndCommentId(long postId, long commentId) {
-        return null;
+        //Fetching PostEntity using PostRepository from postId
+        PostEntity postEntity=postRepository.findById(postId).orElseThrow(()->new ResourceNotFoundException("Post","Id",String.valueOf(postId)));
+
+        //Fetching CommentEntity using CommentRepository from commentId
+        CommentEntity commentEntity=commentRepository.findById(commentId).orElseThrow(()->new ResourceNotFoundException("Comment","ID",String.valueOf(commentId)));
+
+        //Validate comment belong to particular Post
+        if(!(commentEntity.getPostEntity().getId()).equals(postEntity.getId()))
+            throw new RuntimeException("Bad Request :: Comment not found!");
+
+        //Map commentEntity to commentDto
+        return mapEntityToDto(commentEntity);
+    }
+
+    @Override
+    public CommentDto updateCommentByPostIdAndCommentId(long postId, long commentId, CommentDto commentDto) {
+        //Fetching PostEntity using PostRepository from postId
+        PostEntity postEntity=postRepository.findById(postId).orElseThrow(()->new ResourceNotFoundException("Post","Id",String.valueOf(postId)));
+
+        //Fetching CommentEntity using CommentRepository from commentId
+        CommentEntity commentEntity=commentRepository.findById(commentId).orElseThrow(()->new ResourceNotFoundException("Comment","ID",String.valueOf(commentId)));
+
+        //Validate comment belong to particular Post
+        if(!(commentEntity.getPostEntity().getId()).equals(postEntity.getId()))
+            throw new RuntimeException("Bad Request :: Comment not found!");
+        //Updating CommentEntity
+        commentEntity.setUserName(commentDto.getUserName());
+        commentEntity.setEmail(commentDto.getEmail());
+        commentEntity.setBody(commentDto.getBody());
+
+        //Save updated CommentEntity to the DB
+        CommentEntity updatedCommentEntity=commentRepository.save(commentEntity);
+
+        //Mapping updated commentEntity to Dto and return it
+        return mapEntityToDto(updatedCommentEntity);
+    }
+
+    @Override
+    public String deleteCommentByPostIdAndCommentId(long postId, long commentId) {
+        //Fetching PostEntity using PostRepository from postId
+        PostEntity postEntity=postRepository.findById(postId).orElseThrow(()->new ResourceNotFoundException("Post","Id",String.valueOf(postId)));
+
+        //Fetching CommentEntity using CommentRepository from commentId
+        CommentEntity commentEntity=commentRepository.findById(commentId).orElseThrow(()->new ResourceNotFoundException("Comment","ID",String.valueOf(commentId)));
+
+        //Validate comment belong to particular Post
+        if(!(commentEntity.getPostEntity().getId()).equals(postEntity.getId()))
+            throw new RuntimeException("Bad Request :: Comment not found!");
+        //Delete CommentEntity
+        commentRepository.deleteById(commentId);
+        return "Comment with Id :"+commentId+ " for the post with Id : "+postId+" is deleted.";
+    }
+
+    @Override
+    public String deleteAllCommentsOfPostFromPostId(long postId) {
+        //Fetching PostEntity using PostRepository from postId
+        PostEntity postEntity=postRepository.findById(postId).orElseThrow(()->new ResourceNotFoundException("Post","Id",String.valueOf(postId)));
+        //deleting all the comments for that particular Post
+        commentRepository.deleteByPostId(postEntity.getId());
+        return "All the Comments for the post with Id : "+postId+" is deleted.";
     }
 
     private CommentEntity mapCommentDtoToEntity(CommentDto commentDto) {
